@@ -4,6 +4,16 @@
 In this lab, I performed an <strong>authenticated vulnerability scan</strong> against a Windows 11 virtual machine using <strong>Tenable Vulnerability Management</strong>, intentionally introduced common Windows vulnerabilities, remediated them using <strong>PowerShell scripts</strong>, and validated risk reduction through rescanning.
 </p>
 
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+  <p>
+    This content is hidden by default and shown when expanded.
+  </p>
+
+</details>
+
+
 <hr />
 
 <h2>☁️ Step 1: Provision a Windows 11 Virtual Machine</h2>
@@ -22,8 +32,8 @@ I provisioned a Windows 11 virtual machine and ensured secure credential practic
 Using weak or default credentials on exposed VMs frequently leads to compromise.
 </p>
 
-<p><strong>📸 Screenshot:</strong> Windows 11 VM Overview</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
+<img width="543" height="459" alt="image" src="https://github.com/user-attachments/assets/442f1582-9aff-4941-aab0-a944135d985b" />
+
 
 <hr />
 
@@ -80,8 +90,8 @@ I configured an authenticated vulnerability scan using a DISA STIG-aligned templ
   <li>Configured Windows credentials</li>
 </ul>
 
-<p><strong>📸 Screenshot:</strong> Authenticated Scan Configuration</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
+<img width="1853" height="751" alt="image" src="https://github.com/user-attachments/assets/3bd5f21a-6073-494a-a99f-3e6a757ce030" />
+
 
 <hr />
 
@@ -97,11 +107,8 @@ To simulate real-world risk, I intentionally introduced several common vulnerabi
   <li>Enabled deprecated cryptographic protocols (SSL 2.0, SSL 3.0, TLS 1.0, TLS 1.1)</li>
 </ul>
 
-<p><strong>📸 Screenshot:</strong> Outdated Firefox Installed</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
+<img width="631" height="61" alt="image" src="https://github.com/user-attachments/assets/5d9d5c2c-9455-4cd7-8d9a-6d48542921bd" />
 
-<p><strong>📸 Screenshot:</strong> SMBv1 Enabled</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
 
 <hr />
 
@@ -111,8 +118,6 @@ To simulate real-world risk, I intentionally introduced several common vulnerabi
 I restarted the VM to ensure all configuration changes were applied.
 </p>
 
-<p><strong>📸 Screenshot:</strong> VM Restart</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
 
 <hr />
 
@@ -128,8 +133,8 @@ I ran the authenticated scan again to detect the newly introduced vulnerabilitie
   <li>Identified deprecated SSL/TLS protocols</li>
 </ul>
 
-<p><strong>📸 Screenshot:</strong> Vulnerabilities Detected</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
+<img width="1859" height="145" alt="image" src="https://github.com/user-attachments/assets/c728aa85-7564-4a1a-adb0-0384507af4e4" />
+
 
 <hr />
 
@@ -149,11 +154,217 @@ I remediated the vulnerabilities using PowerShell scripts.
 Example remediation commands:
 </p>
 
-<pre>
+powershell -ExecutionPolicy Bypass -File "C:\users\labuser\desktop\remediation-FireFox-uninstall.ps1"
+
+<details>
+  <summary><strong>Firefox Remediation</strong></summary>
+  <p>
 powershell -ExecutionPolicy Bypass -File "remediation-FireFox-uninstall.ps1"
+  <pre><code class="language-powershell">
+# Define the path to the uninstall helper
+$uninstallHelperPath = 'C:\Program Files\Mozilla Firefox\uninstall\helper.exe'
+
+# Check if the uninstall helper exists
+if (Test-Path $uninstallHelperPath) {
+    #If the file exists, execute it silently
+    Invoke-Expression "& `"$uninstallHelperPath`" /S"
+    Write-Host "Firefox uninstall command executed."
+} else {
+    Write-Host "Firefox uninstall helper does not exist at the specified path."
+}
+</p></details>
+
+
 powershell -ExecutionPolicy Bypass -File "remediation-SMBv1.ps1"
+
+<details>
+  <summary><strong>SMB 1.0 Remediation</strong></summary>
+  <p>
+# Disable SMBv1 - CIFS File Sharing Support
+Write-Output "Disabling SMBv1 Protocol..."
+Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
+
+# Disable the SMBv1 Client
+$clientKeyPath = "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters"
+$clientDriverPath = "HKLM:\SYSTEM\CurrentControlSet\Services\mrxsmb10"
+Write-Output "Disabling SMBv1 Client..."
+if (Test-Path $clientKeyPath) {
+    Set-ItemProperty -Path $clientKeyPath -Name "AllowInsecureGuestAuth" -Value 0
+}
+if (Test-Path $clientDriverPath) {
+    Set-ItemProperty -Path $clientDriverPath -Name "Start" -Value 4
+} else {
+    Write-Output "SMBv1 Client driver registry path does not exist. It may not be necessary or supported on this system."
+}
+
+# Disable the SMBv1 Server
+$serverKeyPath = "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters"
+Write-Output "Disabling SMBv1 Server..."
+if (Test-Path $serverKeyPath) {
+    Set-ItemProperty -Path $serverKeyPath -Name "SMB1" -Value 0
+} else {
+    Write-Output "SMBv1 Server registry path does not exist. Check if SMBv1 is supported on this system."
+}
+
+Write-Output "SMBv1 has been disabled on your system. Please review the output for any potential issues."
+</p></details>
+
+
 powershell -ExecutionPolicy Bypass -File "toggle-win11-protocols.ps1"
-</pre>
+
+
+<details>
+  <summary><strong>Toggle Protocols</strong></summary>
+  <p>
+# Variable to determine if we want to make the computer secure or insecure
+$makeSecure = $true
+
+# Check if the script is run as Administrator
+function Check-Admin {
+    $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object System.Security.Principal.WindowsPrincipal($identity)
+    $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+# Main script
+if (-not (Check-Admin)) {
+    Write-Error "Access Denied. Please run with Administrator privileges."
+    exit 1
+}
+
+# SSL 2.0 settings
+$serverPathSSL2 = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\SSL 2.0\Server"
+$clientPathSSL2 = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\SSL 2.0\Client"
+
+if ($makeSecure) {
+    New-Item -Path $serverPathSSL2 -Force | Out-Null
+    New-ItemProperty -Path $serverPathSSL2 -Name 'Enabled' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $serverPathSSL2 -Name 'DisabledByDefault' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+
+    New-Item -Path $clientPathSSL2 -Force | Out-Null
+    New-ItemProperty -Path $clientPathSSL2 -Name 'Enabled' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $clientPathSSL2 -Name 'DisabledByDefault' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+
+    Write-Host "SSL 2.0 has been disabled."
+} else {
+    New-Item -Path $serverPathSSL2 -Force | Out-Null
+    New-ItemProperty -Path $serverPathSSL2 -Name 'Enabled' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $serverPathSSL2 -Name 'DisabledByDefault' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+
+    New-Item -Path $clientPathSSL2 -Force | Out-Null
+    New-ItemProperty -Path $clientPathSSL2 -Name 'Enabled' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $clientPathSSL2 -Name 'DisabledByDefault' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+
+    Write-Host "SSL 2.0 has been enabled."
+}
+
+# SSL 3.0 settings
+$serverPathSSL3 = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\SSL 3.0\Server"
+$clientPathSSL3 = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\SSL 3.0\Client"
+
+if ($makeSecure) {
+    New-Item -Path $serverPathSSL3 -Force | Out-Null
+    New-ItemProperty -Path $serverPathSSL3 -Name 'Enabled' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $serverPathSSL3 -Name 'DisabledByDefault' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+
+    New-Item -Path $clientPathSSL3 -Force | Out-Null
+    New-ItemProperty -Path $clientPathSSL3 -Name 'Enabled' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $clientPathSSL3 -Name 'DisabledByDefault' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+
+    Write-Host "SSL 3.0 has been disabled."
+} else {
+    New-Item -Path $serverPathSSL3 -Force | Out-Null
+    New-ItemProperty -Path $serverPathSSL3 -Name 'Enabled' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $serverPathSSL3 -Name 'DisabledByDefault' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+
+    New-Item -Path $clientPathSSL3 -Force | Out-Null
+    New-ItemProperty -Path $clientPathSSL3 -Name 'Enabled' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $clientPathSSL3 -Name 'DisabledByDefault' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+
+    Write-Host "SSL 3.0 has been enabled."
+}
+
+# TLS 1.0 settings
+$serverPathTLS10 = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server"
+$clientPathTLS10 = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Client"
+
+if ($makeSecure) {
+    New-Item -Path $serverPathTLS10 -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS10 -Name 'Enabled' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS10 -Name 'DisabledByDefault' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+
+    New-Item -Path $clientPathTLS10 -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS10 -Name 'Enabled' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS10 -Name 'DisabledByDefault' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+
+    Write-Host "TLS 1.0 has been disabled."
+} else {
+    New-Item -Path $serverPathTLS10 -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS10 -Name 'Enabled' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS10 -Name 'DisabledByDefault' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+
+    New-Item -Path $clientPathTLS10 -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS10 -Name 'Enabled' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS10 -Name 'DisabledByDefault' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+
+    Write-Host "TLS 1.0 has been enabled."
+}
+
+# TLS 1.1 settings
+$serverPathTLS11 = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Server"
+$clientPathTLS11 = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Client"
+
+if ($makeSecure) {
+    New-Item -Path $serverPathTLS11 -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS11 -Name 'Enabled' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS11 -Name 'DisabledByDefault' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+
+    New-Item -Path $clientPathTLS11 -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS11 -Name 'Enabled' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS11 -Name 'DisabledByDefault' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+
+    Write-Host "TLS 1.1 has been disabled."
+} else {
+    New-Item -Path $serverPathTLS11 -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS11 -Name 'Enabled' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS11 -Name 'DisabledByDefault' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+
+    New-Item -Path $clientPathTLS11 -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS11 -Name 'Enabled' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS11 -Name 'DisabledByDefault' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+
+    Write-Host "TLS 1.1 has been enabled."
+}
+
+# TLS 1.2 settings
+$serverPathTLS12 = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Server"
+$clientPathTLS12 = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Client"
+
+if ($makeSecure) {
+    New-Item -Path $serverPathTLS12 -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS12 -Name 'Enabled' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS12 -Name 'DisabledByDefault' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+
+    New-Item -Path $clientPathTLS12 -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS12 -Name 'Enabled' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS12 -Name 'DisabledByDefault' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+
+    Write-Host "TLS 1.2 has been enabled."
+} else {
+    New-Item -Path $serverPathTLS12 -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS12 -Name 'Enabled' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $serverPathTLS12 -Name 'DisabledByDefault' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+
+    New-Item -Path $clientPathTLS12 -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS12 -Name 'Enabled' -Value 0 -PropertyType 'DWord' -Force | Out-Null
+    New-ItemProperty -Path $clientPathTLS12 -Name 'DisabledByDefault' -Value 1 -PropertyType 'DWord' -Force | Out-Null
+
+    Write-Host "TLS 1.2 has been disabled."
+}
+
+Write-Host "Please reboot for settings to take effect."
+</p></details>
+
 
 <p>
 Optionally, I executed all remediation steps using a batch file.
