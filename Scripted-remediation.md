@@ -160,11 +160,12 @@ powershell -ExecutionPolicy Bypass -File "C:\users\labuser\desktop\remediation-F
   <summary><strong>Firefox Remediation</strong></summary>
   <p>
 powershell -ExecutionPolicy Bypass -File "remediation-FireFox-uninstall.ps1"
-  <pre><code class="language-powershell">
 # Define the path to the uninstall helper
+    
 $uninstallHelperPath = 'C:\Program Files\Mozilla Firefox\uninstall\helper.exe'
 
-# Check if the uninstall helper exists
+Check if the uninstall helper exists
+
 if (Test-Path $uninstallHelperPath) {
     #If the file exists, execute it silently
     Invoke-Expression "& `"$uninstallHelperPath`" /S"
@@ -370,15 +371,15 @@ Write-Host "Please reboot for settings to take effect."
 Optionally, I executed all remediation steps using a batch file.
 </p>
 
-<p><strong>📸 Screenshot:</strong> PowerShell Remediation Execution</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
+<img width="919" height="213" alt="image" src="https://github.com/user-attachments/assets/cc42fd8f-1d2e-490b-b095-0c992b673745" />
+
 
 <hr />
 
 <h2>🔁 Step 9: Restart and Rescan</h2>
 
 <p>
-After remediation, I restarted the VM and ran a final authenticated scan.
+After remediation, I restarted the VM and ran a few final authenticated scans.
 </p>
 
 <ul>
@@ -386,8 +387,8 @@ After remediation, I restarted the VM and ran a final authenticated scan.
   <li>Observed reduced findings and improved security posture</li>
 </ul>
 
-<p><strong>📸 Screenshot:</strong> Post-Remediation Scan Results</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
+<img width="1851" height="483" alt="image" src="https://github.com/user-attachments/assets/d16883ab-2a20-4332-81ae-b3fff5b141db" />
+
 
 <hr />
 
@@ -402,8 +403,12 @@ I exported scan results and compared pre- and post-remediation findings.
   <li>Confirmed risk reduction</li>
 </ul>
 
-<p><strong>📸 Screenshot:</strong> Scan Comparison</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
+<img width="1851" height="481" alt="image" src="https://github.com/user-attachments/assets/f2f078be-f045-4701-88e2-33e2f28e23fa" />
+
+<img width="1851" height="503" alt="image" src="https://github.com/user-attachments/assets/ca43a2fb-909b-4ef3-a100-3739195cdab3" />
+
+<img width="1851" height="501" alt="image" src="https://github.com/user-attachments/assets/370b3688-9699-4229-9eac-8eb747eedbec" />
+
 
 <hr />
 
@@ -421,9 +426,6 @@ After completing validation, I removed all lab resources.
 <p>
 This ensures cost control and prevents unnecessary exposure.
 </p>
-
-<p><strong>📸 Screenshot:</strong> Resource Cleanup</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
 
 <hr />
 
