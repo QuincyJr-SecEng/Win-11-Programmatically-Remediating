@@ -48,8 +48,6 @@ To ensure full scan visibility, I disabled the Windows Firewall on the VM.
   <li>Disabled all firewall profiles</li>
 </ul>
 
-<p><strong>📸 Screenshot:</strong> Windows Firewall Disabled</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
 
 <hr />
 
@@ -71,9 +69,6 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies
 <p>
 This allows local administrator accounts to authenticate remotely with full privileges during credentialed scans.
 </p>
-
-<p><strong>📸 Screenshot:</strong> PowerShell Registry Modification</p>
-<p><em>[INSERT SCREENSHOT HERE]</em></p>
 
 <hr />
 
